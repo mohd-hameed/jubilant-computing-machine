@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic Tac Toe Glow</title>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* CSS for the splash screen */
+    #splash-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: black; /* Solid black background */
+        z-index: 99999; /* Ensure it's on top of everything */
+        opacity: 1;
+        transition: opacity 1s ease-out; /* Fade-out transition */
+    }
+
+    #splash-screen.fade-out {
+        opacity: 0;
+        visibility: hidden; /* Hide it completely after fade */
+    }
+
+    :root {
+      /* Define glowing colors as CSS variables for easier management */
+      --glow-pink: #ff33ff;
+      --glow-blue: #00ccff;
+      --glow-yellow: #ffff33;
+      --glow-purple: #8000ff;
+      --glow-cyan: #00ffff;
+      --bg-dark-purple: #2b0057;
+      --bg-darker-purple: #170028;
+      --cell-bg: #1a0033;
+    }
+
+    Html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Dancing Script', cursive;
+      background: linear-gradient(to bottom right, var(--bg-dark-purple), var(--bg-darker-purple));
+      overflow: hidden;
+      color: white;
+      cursor: url('assets/cursor.png'), auto; /* Custom cursor for polished feel */
+      position: relative; /* For particle effects or global glows */
+    }
+
+    /* Apply calligraphy font to specific elements for consistency */
+    .title,
+    .decor,
+    .play-mode,
+    .button,
+    .pick-title,
+    .pick-icon,
+    .player-indicator,
+    .vs-text,
+    .turn-indicator,
+    .cell,
+    #result-message {
+      font-family: 'Dancing Script', cursive;
+    }
+
+    /* Global Pulsating Background Glow */
+    body::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 150vmax; /* Larger to cover entire screen */
+      height: 150vmax;
+      background: radial-gradient(circle at center, rgba(0, 204, 255, 0.1) 0%, rgba(255, 51, 204, 0.1) 50%, transparent 70%);
+      border-radius: 50%;
+      transform: translate(-50%, -50%) scale(0.8);
+      animation: backgroundPulse 15s infinite alternate ease-in-out;
+      z-index: -1; /* Behind all content */
+      pointer-events: none;
+    }
+
+    @keyframes backgroundPulse {
+      from { transform: translate(-50%, -50%) scale(0.8); opacity: 0.7; }
+      to { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+    }
+
+
+    .screen {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      /* Adjusted transition for a smoother, more dynamic feel */
+      transition: opacity 1s ease, transform 0.8s ease-in-out;
+      pointer-events: none;
+      z-index: 0;
+      transform: translateY(20px); /* Start slightly off-screen for entrance */
+    }
+
+    .screen.active {
+      opacity: 1;
+      pointer-events: auto;
+      z-index: 10;
+      transform: translateY(0); /* Slide into view */
+    }
+
+    /* Specific z-index for screens */
+    #main-menu-screen.active { z-index: 12; }
+    #pick-side-screen.active { z-index: 13; }
+    #game-board-screen.active { z-index: 14; }
+    #result-screen.active { z-index: 16; }
+
+    .title {
+      font-size: 11.5em;
+      font-weight: bold;
+      color: var(--glow-pink);
+      text-shadow: 0 0 8px var(--glow-pink), 0 0 15px var(--glow-pink); /* Stronger glow */
+      letter-spacing: 2px; /* Slightly spaced out */
+    }
+
+    .decor {
+      font-size: 1.8em;
+      margin-top: 15px;
+    }
+
+    .dot {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--glow-blue);
+      margin: 0 5px;
+      box-shadow: 0 0 10px var(--glow-blue), 0 0 20px var(--glow-blue); /* Stronger glow */
+      animation: dotPulse 1.5s infinite alternate ease-in-out; /* Add pulse */
+    }
+
+    .dot:nth-child(even) { /* Alternate animation delay */
+        animation-delay: 0.3s;
+    }
+
+    @keyframes dotPulse {
+        from { transform: scale(1); opacity: 0.8; }
+        to { transform: scale(1.15); opacity: 1; }
+    }
+
+
+    .cross {
+      display: inline-block;
+      font-size: 1.5em;
+      color: var(--glow-yellow);
+      text-shadow: 0 0 8px var(--glow-yellow), 0 0 15px var(--glow-yellow); /* Stronger glow */
+      animation: crossFade 2s infinite alternate ease-in-out; /* Subtle fade */
+    }
+
+    @keyframes crossFade {
+        from { opacity: 0.7; }
+        to { opacity: 1; }
+    }
+
+
+    .play-mode {
+      font-size: 2.2em;
+      color: #ffd700;
+      margin: 30px 0;
+      font-weight: bold;
+      text-shadow: 0 0 8px #ffd700, 0 0 15px #ffd700; /* Stronger glow */
+    }
+
+    .button {
+      width: 280px;
+      padding: 16px;
+      margin: 18px;
+      border-radius: 50px;
+      border: 3px solid;
+      font-size: 1.6em;
+      background: transparent;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease-in-out;
+      text-shadow: 0 0 10px white;
+      position: relative; /* For active state glow */
+      overflow: hidden; /* For sparkle effect on hover */
+    }
+
+    .button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      transform: skewX(-30deg);
+      transition: all 0.5s ease-in-out;
+    }
+
+    .button:hover::before {
+      left: 100%;
+    }
+
+
+    .button-ai {
+      border-color: var(--glow-purple);
+      box-shadow: 0 0 18px var(--glow-purple); /* Stronger shadow */
+    }
+
+    .button-ai:hover {
+      background-color: var(--glow-purple);
+      box-shadow: 0 0 25px var(--glow-purple);
+    }
+    .button-ai:active {
+        transform: scale(0.98);
+        box-shadow: 0 0 10px var(--glow-purple);
+    }
+
+    .button-friend {
+      border-color: #ff33cc;
+      box-shadow: 0 0 18px #ff33cc; /* Stronger shadow */
+    }
+
+    .button-friend:hover {
+      background-color: #ff33cc;
+      box-shadow: 0 0 25px #ff33cc;
+    }
+    .button-friend:active {
+        transform: scale(0.98);
+        box-shadow: 0 0 10px #ff33cc;
+    }
+
+    /* Pick Side Screen */
+    .pick-title {
+      font-size: 3.5em;
+      color: #d2a4ff;
+      margin-bottom: 50px;
+      text-shadow: 0 0 12px #d2a4ff, 0 0 25px #d2a4ff; /* Stronger glow */
+    }
+
+    .pick-icons {
+      display: flex;
+      justify-content: center;
+      gap: 70px;
+      margin-bottom: 50px;
+    }
+
+    .pick-icon {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 6em;
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+      border: 3px solid transparent; /* Added for selected state transition */
+      position: relative; /* For inner glow effect */
+    }
+
+    /* Inner glow for pick icons */
+    .pick-icon::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: transparent;
+        box-shadow: inset 0 0 0px; /* Start with no inner shadow */
+        transition: box-shadow 0.3s ease;
+        z-index: -1;
+    }
+
+    .pick-icon.circle::before {
+        box-shadow: inset 0 0 15px rgba(255, 0, 255, 0.5);
+    }
+
+    .pick-icon.crossx::before {
+        box-shadow: inset 0 0 15px rgba(255, 255, 51, 0.5);
+    }
+
+
+    .pick-icon:hover {
+      transform: scale(1.1);
+      background-color: rgba(255, 255, 255, 0.05); /* Subtle background on hover */
+    }
+
+    .pick-icon.selected {
+      transform: scale(1.25); /* Slightly larger when selected */
+      border-color: rgba(255, 255, 255, 0.5); /* Subtle white border to indicate selection */
+    }
+
+    .circle {
+      color: var(--glow-pink);
+      text-shadow: 0 0 25px var(--glow-pink), 0 0 50px var(--glow-pink); /* Stronger glow */
+    }
+
+    .crossx {
+      color: var(--glow-yellow);
+      text-shadow: 0 0 25px var(--glow-yellow), 0 0 50px var(--glow-yellow); /* Stronger glow */
+    }
+
+    .pick-icon.circle.selected {
+        box-shadow: 0 0 25px var(--glow-pink), 0 0 50px var(--glow-pink);
+    }
+
+    .pick-icon.crossx.selected {
+        box-shadow: 0 0 25px var(--glow-yellow), 0 0 50px var(--glow-yellow);
+    }
+
+    .button-continue {
+      border-color: var(--glow-pink);
+      box-shadow: 0 0 18px var(--glow-pink); /* Matched to main buttons */
+      background-color: transparent;
+    }
+
+    .button-continue:hover {
+      background-color: rgba(255, 51, 255, 0.25); /* More translucent hover */
+      box-shadow: 0 0 25px var(--glow-pink);
+    }
+    .button-continue:active {
+        transform: scale(0.98);
+        box-shadow: 0 0 10px var(--glow-pink);
+    }
+
+
+    /* Game Board Screen */
+    #game-board-screen {
+      justify-content: flex-start;
+      padding-top: 60px;
+    }
+
+    .player-score {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 40px;
+      margin-bottom: 40px;
+      width: 100%;
+      max-width: 450px;
+    }
+
+    .player-indicator {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4em;
+      font-weight: bold;
+      border: 3px solid;
+      box-shadow: 0 0 15px;
+      transition: all 0.4s ease-in-out; /* Smoother transition */
+      opacity: 0.4; /* Default dim state */
+      transform: scale(0.9);
+      position: relative;
+    }
+
+    /* Subtle internal pulse for active player */
+    .player-indicator.active-player::before {
+        content: '';
+        position: absolute;
+        inset: -5px; /* Slightly outside the border */
+        border-radius: 50%;
+        border: 2px solid;
+        animation: activePulse 1.5s infinite ease-out;
+        opacity: 0;
+        z-index: -1;
+    }
+
+    #player-o-indicator.active-player::before { border-color: var(--glow-pink); }
+    #player-x-indicator.active-player::before { border-color: var(--glow-yellow); }
+
+    @keyframes activePulse {
+        0% { transform: scale(0.9); opacity: 0; }
+        50% { transform: scale(1.1); opacity: 0.5; }
+        100% { transform: scale(1.2); opacity: 0; }
+    }
+
+
+    .player-indicator.active-player {
+      opacity: 1;
+      transform: scale(1.15); /* Slightly larger when active */
+    }
+
+    #player-o-indicator {
+      color: var(--glow-pink);
+      border-color: var(--glow-pink);
+      box-shadow: 0 0 18px var(--glow-pink);
+    }
+
+    #player-x-indicator {
+      color: var(--glow-yellow);
+      border-color: var(--glow-yellow);
+      box-shadow: 0 0 18px var(--glow-yellow);
+    }
+
+    .vs-text {
+      font-size: 2.5em;
+      font-weight: bold;
+      color: white;
+      text-shadow: 0 0 12px white, 0 0 20px white;
+    }
+
+    .turn-indicator {
+      font-size: 2.5em;
+      font-weight: bold;
+      color: var(--glow-blue);
+      text-shadow: 0 0 12px var(--glow-blue), 0 0 25px var(--glow-blue); /* Stronger glow */
+      margin-bottom: 50px;
+      animation: turnIndicatorPulse 1.2s infinite alternate ease-in-out; /* Pulse effect */
+    }
+
+    @keyframes turnIndicatorPulse {
+        from { transform: scale(1); opacity: 0.9; }
+        to { transform: scale(1.05); opacity: 1; }
+    }
+
+
+    .game-board {
+      display: grid;
+      grid-template-columns: repeat(3, 110px);
+      grid-template-rows: repeat(3, 110px);
+      gap: 18px;
+      background: rgba(0, 0, 0, 0.4); /* Slightly darker transparent background */
+      padding: 18px;
+      border-radius: 10px;
+      box-shadow: 0 0 35px rgba(0, 255, 255, 0.8), 0 0 50px rgba(0, 255, 255, 0.4); /* Stronger cyan glow */
+      position: relative; /* For win line effect */
+    }
+
+    /* Optional: A subtle border animation for the board */
+    .game-board::before {
+        content: '';
+        position: absolute;
+        inset: -5px;
+        border-radius: 15px;
+        border: 2px solid transparent;
+        background: linear-gradient(45deg, var(--glow-cyan), var(--glow-pink)) border-box;
+        -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        animation: boardBorderGlow 3s infinite alternate ease-in-out;
+        pointer-events: none;
+    }
+
+    @keyframes boardBorderGlow {
+        from { transform: scale(1); opacity: 0.7; }
+        to { transform: scale(1.01); opacity: 1; }
+    }
+
+    .cell {
+      width: 110px;
+      height: 110px;
+      background: var(--cell-bg);
+      border: 2px solid var(--glow-cyan);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 5em;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease, border-color 0.3s ease;
+      box-shadow: 0 0 12px var(--glow-cyan); /* Stronger glow */
+      position: relative;
+    }
+
+    .cell:not(.occupied):hover {
+      background-color: #330066;
+      box-shadow: 0 0 25px var(--glow-cyan), 0 0 40px rgba(0, 255, 255, 0.5); /* Stronger hover glow */
+      transform: scale(1.08); /* More pronounced pop */
+      border-color: white; /* Border highlights on hover */
+    }
+
+    .cell.occupied {
+      cursor: default;
+    }
+
+    .cell.circle-placed {
+      color: var(--glow-pink);
+      text-shadow: 0 0 20px var(--glow-pink), 0 0 40px var(--glow-pink);
+      animation: cellPlaceAnimation 0.3s ease-out;
+    }
+
+    .cell.cross-placed {
+      color: var(--glow-yellow);
+      text-shadow: 0 0 20px var(--glow-yellow), 0 0 40px var(--glow-yellow);
+      animation: cellPlaceAnimation 0.3s ease-out;
+    }
+
+    @keyframes cellPlaceAnimation {
+        from {
+            transform: scale(0.3); /* Start smaller */
+            opacity: 0;
+            filter: blur(5px);
+        }
+        to {
+            transform: scale(1);
+            opacity: 1;
+            filter: blur(0);
+        }
+    }
+
+    /* Winning Cells Highlight with Sparkle */
+    .cell.winning-cell {
+        animation: winningCellGlow 0.8s infinite alternate ease-in-out;
+        border-color: gold !important;
+        box-shadow: 0 0 30px gold, 0 0 60px gold !important; /* Even stronger glow */
+        position: relative;
+        overflow: hidden; /* Ensure sparkles stay within cell */
+    }
+
+    /* Sparkle effect on winning cells */
+    .cell.winning-cell::after {
+        content: '';
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background: white;
+        border-radius: 50%;
+        box-shadow: 0 0 8px white, 0 0 15px white;
+        animation: sparkle 1.5s infinite ease-out forwards;
+        opacity: 0;
+    }
+
+    .cell.winning-cell:nth-child(even)::after { animation-delay: 0.2s; }
+    .cell.winning-cell:nth-child(odd)::after { animation-delay: 0.5s; }
+
+
+    @keyframes sparkle {
+        0% { transform: translate(50%, 50%) scale(0); opacity: 0; }
+        20% { transform: translate(var(--sparkle-x, 20px), var(--sparkle-y, 20px)) scale(1); opacity: 1; }
+        100% { transform: translate(var(--sparkle-x, 80px), var(--sparkle-y, 80px)) scale(0.5); opacity: 0; }
+    }
+
+    /* Assign random sparkle positions (can be done with JS for more control) */
+    .cell:nth-child(1)::after { --sparkle-x: 10px; --sparkle-y: 10px; }
+    .cell:nth-child(2)::after { --sparkle-x: 50px; --sparkle-y: 50px; }
+    .cell:nth-child(3)::after { --sparkle-x: -20px; --sparkle-y: 70px; }
+    .cell:nth-child(4)::after { --sparkle-x: 70px; --sparkle-y: -10px; }
+    .cell:nth-child(5)::after { --sparkle-x: 30px; --sparkle-y: -50px; }
+    .cell:nth-child(6)::after { --sparkle-x: -40px; --sparkle-y: 30px; }
+    .cell:nth-child(7)::after { --sparkle-x: 0px; --sparkle-y: 60px; }
+    .cell:nth-child(8)::after { --sparkle-x: 60px; --sparkle-y: 0px; }
+    .cell:nth-child(9)::after { --sparkle-x: -10px; --sparkle-y: -10px; }
+
+
+    @keyframes winningCellGlow {
+        from {
+            transform: scale(1);
+            background-color: var(--cell-bg);
+        }
+        to {
+            transform: scale(1.05); /* Slightly less dramatic pop to allow sparkle to show */
+            background-color: rgba(128, 0, 255, 0.4); /* Softer purple pulsate */
+        }
+    }
+
+
+    .game-buttons {
+      margin-top: 50px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .button-game {
+      width: 240px;
+      padding: 14px;
+      border-radius: 50px;
+      border: 3px solid;
+      font-size: 1.2em;
+      background: transparent;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease-in-out;
+      text-shadow: 0 0 8px white;
+      position: relative; /* For sparkle effect */
+      overflow: hidden;
+    }
+
+    .button-game::before { /* Re-use sparkle effect on game buttons */
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.1);
+        transform: skewX(-30deg);
+        transition: all 0.5s ease-in-out;
+    }
+
+    .button-game:hover::before {
+        left: 100%;
+    }
+
+
+    .button-play-again {
+      border-color: var(--glow-pink);
+      box-shadow: 0 0 15px var(--glow-pink);
+    }
+
+    .button-play-again:hover {
+      background-color: var(--glow-pink);
+    }
+    .button-play-again:active {
+        transform: scale(0.98);
+        box-shadow: 0 0 8px var(--glow-pink);
+    }
+
+
+    .button-back-to-menu {
+      border-color: var(--glow-blue);
+      box-shadow: 0 0 15px var(--glow-blue);
+    }
+
+    .button-back-to-menu:hover {
+      background-color: var(--glow-blue);
+    }
+    .button-back-to-menu:active {
+        transform: scale(0.98);
+        box-shadow: 0 0 8px var(--glow-blue);
+    }
+
+
+    /* Result Screen */
+    #result-screen {
+        background: rgba(0, 0, 0, 0.85); /* Slightly darker overlay */
+        color: white;
+        font-size: 3em;
+        font-weight: bold;
+        text-shadow: 0 0 20px var(--glow-cyan), 0 0 40px var(--glow-cyan); /* Stronger glow */
+        backdrop-filter: blur(5px); /* Add a subtle blur to the background */
+    }
+
+    #result-message {
+        margin-bottom: 35px;
+        animation: pulseResult 1s ease-in-out infinite alternate;
+        position: relative; /* For win/draw icons */
+    }
+
+    /* Optional: Small icon next to result message */
+    #result-message::before {
+        content: '✨'; /* Sparkle or trophy emoji */
+        display: inline-block;
+        margin-right: 15px;
+        font-size: 0.8em;
+        animation: iconBounce 0.8s infinite alternate ease-in-out;
+    }
+
+    @keyframes iconBounce {
+        0% { transform: translateY(0); }
+        100% { transform: translateY(-5px); }
+    }
+
+
+    @keyframes pulseResult {
+        from { transform: scale(0.95); opacity: 0.9; } /* Subtle start */
+        to { transform: scale(1.05); opacity: 1; } /* More pronounced end */
+    }
+
+    .result-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    /* Sound Toggle Button Styles */
+    .sound-toggle-button {
+      position: absolute;
+      top: 25px;
+      right: 25px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid var(--glow-blue);
+      box-shadow: 0 0 15px var(--glow-blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease-in-out;
+      z-index: 20;
+    }
+
+    .sound-toggle-button:hover {
+      background: rgba(0, 204, 255, 0.3);
+      box-shadow: 0 0 25px var(--glow-blue), 0 0 40px rgba(0, 204, 255, 0.5); /* Stronger hover glow */
+    }
+    .sound-toggle-button:active {
+        transform: scale(0.9); /* Stronger press feedback */
+    }
+
+
+    .sound-toggle-button img {
+      width: 65%;
+      height: 65%;
+      filter: drop-shadow(0 0 8px white) drop-shadow(0 0 15px white); /* Stronger white glow for icon */
+    }
+
+    /* Back Button Styles */
+    .back-button {
+      position: absolute;
+      top: 25px;
+      left: 25px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid #ff33cc;
+      box-shadow: 0 0 15px #ff33cc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease-in-out;
+      z-index: 20;
+    }
+
+    .back-button:hover {
+      background: rgba(255, 51, 204, 0.3);
+      box-shadow: 0 0 25px #ff33cc, 0 0 40px rgba(255, 51, 204, 0.5); /* Stronger hover glow */
+    }
+    .back-button:active {
+        transform: scale(0.9); /* Stronger press feedback */
+    }
+
+    .back-button img {
+      width: 65%;
+      height: 65%;
+      filter: drop-shadow(0 0 8px white) drop-shadow(0 0 15px white);
+    }
+
+
+    /* Added for responsiveness */
+    @media (max-width: 768px) {
+      .title {
+        font-size: 3em; /* Adjusted to be more readable */
+      }
+      .decor {
+        font-size: 1.5em;
+      }
+      .play-mode {
+        font-size: 1.8em;
+      }
+      .button {
+        width: 240px;
+        padding: 14px;
+        font-size: 1.2em;
+        margin: 15px;
+      }
+      .pick-title {
+        font-size: 2.5em;
+        margin-bottom: 40px;
+      }
+      .pick-icons {
+        gap: 50px;
+        margin-bottom: 40px;
+      }
+      .pick-icon {
+        width: 100px;
+        height: 100px;
+        font-size: 5em;
+      }
+      .game-board {
+        grid-template-columns: repeat(3, 90px);
+        grid-template-rows: repeat(3, 90px);
+        gap: 12px;
+        padding: 12px;
+      }
+      .cell {
+        width: 90px;
+        height: 90px;
+        font-size: 4em;
+      }
+      .player-indicator {
+        width: 90px;
+        height: 90px;
+        font-size: 3em;
+      }
+      .vs-text, .turn-indicator {
+        font-size: 1.8em;
+      }
+      #result-screen {
+        font-size: 2.2em;
+      }
+      .sound-toggle-button, .back-button {
+        width: 50px;
+        height: 50px;
+        top: 20px;
+        right: 20px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .title {
+        font-size: 2.5em;
+      }
+      .decor {
+        font-size: 1.2em;
+      }
+      .play-mode {
+        font-size: 1.5em;
+      }
+      .button {
+        width: 200px;
+        padding: 12px;
+        font-size: 1.1em;
+        margin: 12px;
+      }
+      .pick-title {
+        font-size: 2em;
+        margin-bottom: 30px;
+      }
+      .pick-icons {
+        gap: 30px;
+        margin-bottom: 30px;
+      }
+      .pick-icon {
+        width: 80px;
+        height: 80px;
+        font-size: 4em;
+      }
+      .game-board {
+        grid-template-columns: repeat(3, 80px);
+        grid-template-rows: repeat(3, 80px);
+        gap: 10px;
+        padding: 10px;
+      }
+      .cell {
+        width: 80px;
+        height: 80px;
+        font-size: 3.5em;
+      }
+      .player-indicator {
+        width: 80px;
+        height: 80px;
+        font-size: 2.5em;
+      }
+      .vs-text, .turn-indicator {
+        font-size: 1.5em;
+      }
+      #result-screen {
+        font-size: 1.8em;
+      }
+      .sound-toggle-button, .back-button {
+        width: 40px;
+        height: 40px;
+        top: 15px;
+        right: 15px;
+        left: 15px; /* Adjust left for back button */
+      }
+      .back-button {
+        left: 15px; /* Ensure back button stays left */
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="splash-screen"></div>
+
+  <div id="main-menu-screen" class="screen">
+    <div class="title">Tic Tac Toe <br />Glow </div>
+    <div class="decor">
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="cross">×</span>
+      <span class="dot"></span>
+      <span class="cross">×</span>
+    </div>
+    <div class="play-mode">Choose your Play Mode</div>
+    <button class="button button-ai" data-mode="AI">With AI</button>
+    <button class="button button-friend" data-mode="FRIEND">With a Friend</button>
+  </div>
+
+  <div id="pick-side-screen" class="screen">
+    <div id="back-button-pick-side" class="back-button">
+        <img src="back.png" alt="Back to Main Menu">
+    </div>
+    <div class="title">Tic Tac Toe <br />GLOW</div>
+    <div class="pick-title">Pick your Side</div>
+    <div class="pick-icons">
+      <div class="pick-icon circle" data-side="O">O</div>
+      <div class="pick-icon crossx" data-side="X">X</div>
+    </div>
+    <button class="button button-continue">Continue</button>
+  </div>
+
+  <div id="game-board-screen" class="screen">
+    <div id="back-button-game-board" class="back-button">
+        <img src="back.png" alt="Back to Pick Side">
+    </div>
+    <div class="player-score">
+      <div id="player-o-indicator" class="player-indicator">O</div>
+      <div class="vs-text">VS</div>
+      <div id="player-x-indicator" class="player-indicator">X</div>
+    </div>
+    <div id="turn-indicator" class="turn-indicator"></div>
+
+    <div class="game-board">
+      <div class="cell" data-cell-index="0"></div>
+      <div class="cell" data-cell-index="1"></div>
+      <div class="cell" data-cell-index="2"></div>
+      <div class="cell" data-cell-index="3"></div>
+      <div class="cell" data-cell-index="4"></div>
+      <div class="cell" data-cell-index="5"></div>
+      <div class="cell" data-cell-index="6"></div>
+      <div class="cell" data-cell-index="7"></div>
+      <div class="cell" data-cell-index="8"></div>
+    </div>
+
+    <div class="game-buttons">
+      <button class="button button-game button-play-again">Play Again</button>
+      <button class="button button-game button-back-to-menu">Back to Menu</button>
+    </div>
+  </div>
+
+  <div id="result-screen" class="screen">
+      <div id="result-message"></div>
+      <div class="result-buttons">
+        <button class="button button-game button-play-again">Play Again</button>
+        <button class="button button-game button-back-to-menu">Back to Menu</button>
+      </div>
+  </div>
+
+  <div id="sound-toggle-button" class="sound-toggle-button">
+    <img id="sound-icon" src="sound_on.png" alt="Sound On/Off">
+  </div>
+
+
+  <script>
+    // --- DOM Elements ---
+    const DOM = {
+        mainMenuScreen: document.getElementById('main-menu-screen'),
+        pickSideScreen: document.getElementById('pick-side-screen'),
+        gameBoardScreen: document.getElementById('game-board-screen'),
+        resultScreen: document.getElementById('result-screen'),
+
+        playModeButtons: document.querySelectorAll('#main-menu-screen .button'),
+        pickSideIcons: document.querySelectorAll('#pick-side-screen .pick-icon'),
+        continueButton: document.querySelector('#pick-side-screen .button-continue'),
+
+        playerOIndicator: document.getElementById('player-o-indicator'),
+        playerXIndicator: document.getElementById('player-x-indicator'),
+        turnIndicator: document.getElementById('turn-indicator'),
+        gameCells: document.querySelectorAll('.cell'),
+
+        resultMessage: document.getElementById('result-message'),
+        playAgainButtons: document.querySelectorAll('.button-play-again'),
+        backToMenuButtons: document.querySelectorAll('.button-back-to-menu'),
+
+        soundToggleButton: document.getElementById('sound-toggle-button'),
+        soundIcon: document.getElementById('sound-icon'),
+        pickSideIconsContainer: document.querySelector('.pick-icons'),
+
+        backButtonPickSide: document.getElementById('back-button-pick-side'),
+        backButtonGameBoard: document.getElementById('back-button-game-board'),
+
+        // Added for splash screen
+        splashScreen: document.getElementById('splash-screen')
+    };
+
+    // --- Constants ---
+    const PLAY_MODES = {
+        AI: 'AI',
+        FRIEND: 'FRIEND'
+    };
+
+    const PLAYER_SYMBOLS = {
+        X: 'X',
+        O: 'O'
+    };
+
+    const WINNING_CONDITIONS = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+        [0, 4, 8], [2, 4, 6]             // Diagonals
+    ];
+
+    // --- Sound Manager (Expanded) ---
+    const SoundManager = {
+        _isSoundOn: true,
+        winSound: new Audio('win.mp3'),
+        drawSound: new Audio('draw.mp3'),
+        placeSound: new Audio('place.mp3'),
+        toggleSound: new Audio('button.mp3'),
+        buttonClickSound: new Audio('button.mp3'),
+
+        init: function() {
+            const savedSoundState = localStorage.getItem('ticTacToeSound');
+            if (savedSoundState !== null) {
+                this._isSoundOn = (savedSoundState === 'true');
+            }
+            this.updateIcon();
+        },
+
+        get isSoundOn() {
+            return this._isSoundOn;
+        },
+
+        toggle: function() {
+            this._isSoundOn = !this._isSoundOn;
+            localStorage.setItem('ticTacToeSound', this._isSoundOn);
+            this.playToggleSound();
+            this.updateIcon();
+        },
+
+        playToggleSound: function() {
+            this.toggleSound.currentTime = 0;
+            this.toggleSound.play().catch(e => console.warn("Toggle audio play failed:", e));
+        },
+
+        playSound: function(audioObject) {
+            if (this._isSoundOn) {
+                audioObject.currentTime = 0;
+                audioObject.play().catch(e => console.warn("Audio play failed:", e));
+            }
+        },
+
+        updateIcon: function() {
+            if (this._isSoundOn) {
+                DOM.soundIcon.src = 'sound_on.png';
+                DOM.soundIcon.alt = 'Sound On';
+            } else {
+                DOM.soundIcon.src = 'sound_off.png'; /* Ensure you have a sound_off.png in assets */
+                DOM.soundIcon.alt = 'Sound Off';
+            }
+        }
+    };
+
+    // --- Utility Functions (UI Manager) ---
+    const UIManager = {
+        transitionScreens(showScreen, hideScreens) {
+            hideScreens.forEach(screen => {
+                screen.classList.remove('active');
+            });
+            // Small delay to allow removal of 'active' class to apply transition before adding new 'active'
+            setTimeout(() => {
+                showScreen.classList.add('active');
+            }, 50);
+        },
+
+        updateTurnIndicator(currentPlayerSymbol) {
+            DOM.turnIndicator.textContent = `${currentPlayerSymbol}'s Turn`;
+
+            DOM.playerOIndicator.classList.remove('active-player');
+            DOM.playerXIndicator.classList.remove('active-player');
+
+            if (currentPlayerSymbol === PLAYER_SYMBOLS.O) {
+                DOM.playerOIndicator.classList.add('active-player');
+            } else {
+                DOM.playerXIndicator.classList.add('active-player');
+            }
+        },
+
+        renderBoard(boardState) {
+            DOM.gameCells.forEach((cell, index) => {
+                cell.textContent = boardState[index];
+                cell.classList.remove('circle-placed', 'cross-placed', 'occupied', 'winning-cell');
+                if (boardState[index] === PLAYER_SYMBOLS.O) {
+                    cell.classList.add('circle-placed', 'occupied');
+                } else if (boardState[index] === PLAYER_SYMBOLS.X) {
+                    cell.classList.add('cross-placed', 'occupied');
+                }
+            });
+        },
+
+        showResult(message) {
+            DOM.resultMessage.textContent = message;
+            this.transitionScreens(DOM.resultScreen, [DOM.gameBoardScreen]);
+            // Optional: Adjust the icon based on win/draw
+            if (message.includes('Wins')) {
+                DOM.resultMessage.style.setProperty('--icon-content', '"🏆"'); // Trophy for win
+            } else {
+                DOM.resultMessage.style.setProperty('--icon-content', '"🤝"'); // Handshake for draw
+            }
+        },
+
+        highlightSelectedSide(selectedSide) {
+            DOM.pickSideIcons.forEach(icon => icon.classList.remove('selected'));
+            const selectedIcon = document.querySelector(`.pick-icon[data-side="${selectedSide}"]`);
+            if (selectedIcon) {
+                selectedIcon.classList.add('selected');
+            }
+        },
+
+        resetPickSideSelection() {
+            DOM.pickSideIcons.forEach(icon => icon.classList.remove('selected'));
+        },
+
+        highlightWinningCells(winningCombo) {
+            winningCombo.forEach(index => {
+                DOM.gameCells[index].classList.add('winning-cell');
+            });
+        },
+
+        clearWinningHighlights() {
+            DOM.gameCells.forEach(cell => {
+                cell.classList.remove('winning-cell');
+            });
+        }
+    };
+
+    // --- Game Logic Class ---
+    class TicTacToeGame {
+        constructor() {
+            this.gameMode = '';
+            this.humanPlayerSymbol = '';
+            this.aiPlayerSymbol = '';
+            this.currentPlayer = PLAYER_SYMBOLS.X;
+            this.boardState = Array(9).fill('');
+            this.gameActive = false;
+            this.aiThinkingTimeout = null;
+        }
+
+        initializeGame() {
+            this.boardState = Array(9).fill('');
+            this.gameActive = true;
+            this.currentPlayer = PLAYER_SYMBOLS.X;
+
+            UIManager.clearWinningHighlights();
+            UIManager.renderBoard(this.boardState);
+            UIManager.updateTurnIndicator(this.currentPlayer);
+
+            if (this.gameMode === PLAY_MODES.AI && this.currentPlayer === this.aiPlayerSymbol) {
+                this.aiThinkingTimeout = setTimeout(() => this.handleAIMove(), 1000);
+            }
+        }
+
+        makeMove(index, playerSymbol) {
+            if (!this.gameActive || this.boardState[index] !== '' || playerSymbol !== this.currentPlayer) {
+                return false;
+            }
+
+            this.boardState[index] = playerSymbol;
+            UIManager.renderBoard(this.boardState);
+            SoundManager.playSound(SoundManager.placeSound);
+
+            const gameResult = this.checkGameStatus(this.boardState);
+
+            if (gameResult.winner) {
+                this.gameActive = false;
+                UIManager.highlightWinningCells(gameResult.winningLine);
+                UIManager.showResult(`${gameResult.winner} Wins!`);
+                SoundManager.playSound(SoundManager.winSound);
+            } else if (gameResult.draw) {
+                this.gameActive = false;
+                UIManager.showResult("It's a Draw!");
+                SoundManager.playSound(SoundManager.drawSound);
+            } else {
+                this.currentPlayer = (this.currentPlayer === PLAYER_SYMBOLS.X ? PLAYER_SYMBOLS.O : PLAYER_SYMBOLS.X);
+                UIManager.updateTurnIndicator(this.currentPlayer);
+
+                if (this.gameMode === PLAY_MODES.AI && this.currentPlayer === this.aiPlayerSymbol && this.gameActive) {
+                    this.aiThinkingTimeout = setTimeout(() => this.handleAIMove(), 700);
+                }
+            }
+            return true;
+        }
+
+        checkGameStatus(board) {
+            for (const condition of WINNING_CONDITIONS) {
+                const [a, b, c] = condition;
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    return { winner: board[a], draw: false, winningLine: condition };
+                }
+            }
+
+            if (!board.includes('')) {
+                return { winner: null, draw: true, winningLine: null };
+            }
+
+            return { winner: null, draw: false, winningLine: null };
+        }
+
+        minimax(currentBoard, player) {
+            const availableSpots = currentBoard.map((cell, index) => cell === '' ? index : -1).filter(index => index !== -1);
+            const gameResult = this.checkGameStatus(currentBoard);
+
+            if (gameResult.winner === this.humanPlayerSymbol) {
+                return { score: -10 };
+            } else if (gameResult.winner === this.aiPlayerSymbol) {
+                return { score: 10 };
+            } else if (gameResult.draw) {
+                return { score: 0 };
+            }
+
+            const moves = [];
+            for (let i = 0; i < availableSpots.length; i++) {
+                const move = {};
+                move.index = availableSpots[i];
+                currentBoard[availableSpots[i]] = player;
+
+                if (player === this.aiPlayerSymbol) {
+                    const result = this.minimax(currentBoard, this.humanPlayerSymbol);
+                    move.score = result.score;
+                } else {
+                    const result = this.minimax(currentBoard, this.aiPlayerSymbol);
+                    move.score = result.score;
+                }
+
+                currentBoard[availableSpots[i]] = '';
+                moves.push(move);
+            }
+
+            let bestMove;
+            if (player === this.aiPlayerSymbol) {
+                let bestScore = -Infinity;
+                for (let i = 0; i < moves.length; i++) {
+                    if (moves[i].score > bestScore) {
+                        bestScore = moves[i].score;
+                        bestMove = i;
+                    }
+                }
+            } else {
+                let bestScore = Infinity;
+                for (let i = 0; i < moves.length; i++) {
+                    if (moves[i].score < bestScore) {
+                        bestScore = moves[i].score;
+                        bestMove = i;
+                    }
+                }
+            }
+            return moves[bestMove];
+        }
+
+        handleAIMove() {
+            if (!this.gameActive || this.currentPlayer !== this.aiPlayerSymbol) {
+                return;
+            }
+            const bestSpot = this.minimax(this.boardState, this.aiPlayerSymbol);
+            this.makeMove(bestSpot.index, this.aiPlayerSymbol);
+        }
+
+        resetFullGame() {
+            this.gameMode = '';
+            this.humanPlayerSymbol = '';
+            this.aiPlayerSymbol = '';
+            this.gameActive = false;
+            this.boardState = Array(9).fill('');
+            if (this.aiThinkingTimeout) {
+                clearTimeout(this.aiThinkingTimeout);
+                this.aiThinkingTimeout = null;
+            }
+            UIManager.resetPickSideSelection();
+            UIManager.renderBoard(this.boardState);
+            UIManager.clearWinningHighlights();
+        }
+
+        resetGameBoard() {
+            this.boardState = Array(9).fill('');
+            this.gameActive = false;
+            if (this.aiThinkingTimeout) {
+                clearTimeout(this.aiThinkingTimeout);
+                this.aiThinkingTimeout = null;
+            }
+            UIManager.renderBoard(this.boardState);
+            UIManager.clearWinningHighlights();
+        }
+
+        setGameMode(mode) {
+            this.gameMode = mode;
+        }
+
+        setHumanPlayerSymbol(symbol) {
+            this.humanPlayerSymbol = symbol;
+            this.aiPlayerSymbol = (symbol === PLAYER_SYMBOLS.X ? PLAYER_SYMBOLS.O : PLAYER_SYMBOLS.X);
+        }
+    }
+
+    // --- Event Handlers ---
+    const game = new TicTacToeGame();
+
+    function handlePlayModeSelect(event) {
+        SoundManager.playSound(SoundManager.buttonClickSound);
+        game.setGameMode(event.target.dataset.mode);
+        game.humanPlayerSymbol = '';
+        game.aiPlayerSymbol = '';
+        UIManager.resetPickSideSelection();
+        UIManager.transitionScreens(DOM.pickSideScreen, [DOM.mainMenuScreen]);
+    }
+
+    function handlePickSideSelect(event) {
+        const clickedIcon = event.target.closest('.pick-icon');
+        if (!clickedIcon) return;
+        SoundManager.playSound(SoundManager.buttonClickSound);
+        game.setHumanPlayerSymbol(clickedIcon.dataset.side);
+        UIManager.highlightSelectedSide(game.humanPlayerSymbol);
+    }
+
+    function handleContinueGame() {
+        SoundManager.playSound(SoundManager.buttonClickSound);
+        if (!game.humanPlayerSymbol) {
+            alert('Please pick your side (O or X) before continuing!');
+            return;
+        }
+        UIManager.transitionScreens(DOM.gameBoardScreen, [DOM.pickSideScreen]);
+        game.initializeGame();
+    }
+
+    function handleCellClick(event) {
+        const clickedCellIndex = parseInt(event.target.dataset.cellIndex);
+        if (game.gameMode === PLAY_MODES.AI && game.currentPlayer === game.aiPlayerSymbol) {
+            return;
+        }
+        game.makeMove(clickedCellIndex, game.currentPlayer);
+    }
+
+    function handlePlayAgain() {
+        SoundManager.playSound(SoundManager.buttonClickSound);
+        UIManager.transitionScreens(DOM.gameBoardScreen, [DOM.resultScreen]);
+        game.initializeGame();
+    }
+
+    function handleBackToMenu() {
+        SoundManager.playSound(SoundManager.buttonClickSound);
+        game.resetFullGame();
+        UIManager.transitionScreens(DOM.mainMenuScreen, [DOM.gameBoardScreen, DOM.pickSideScreen, DOM.resultScreen]);
+    }
+
+    function handleSoundToggle() {
+        SoundManager.toggle();
+    }
+
+    function handleBackFromPickSide() {
+        SoundManager.playSound(SoundManager.buttonClickSound);
+        game.humanPlayerSymbol = '';
+        game.aiPlayerSymbol = '';
+        UIManager.resetPickSideSelection();
+        UIManager.transitionScreens(DOM.mainMenuScreen, [DOM.pickSideScreen]);
+    }
+
+    function handleBackFromGameBoard() {
+        SoundManager.playSound(SoundManager.buttonClickSound);
+        game.resetGameBoard();
+        UIManager.transitionScreens(DOM.pickSideScreen, [DOM.gameBoardScreen]);
+        if (game.humanPlayerSymbol) {
+             UIManager.highlightSelectedSide(game.humanPlayerSymbol);
+        }
+    }
+
+
+    // --- Event Listeners Initialization ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Splash screen fade out
+        const splashScreen = DOM.splashScreen;
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                splashScreen.classList.add('fade-out');
+            }, 500); // Adjust this delay as needed (in milliseconds)
+        });
+
+        SoundManager.init();
+        DOM.mainMenuScreen.classList.add('active');
+
+        DOM.playModeButtons.forEach(button => {
+            button.addEventListener('click', handlePlayModeSelect);
+        });
+
+        DOM.pickSideIconsContainer.addEventListener('click', handlePickSideSelect);
+        DOM.continueButton.addEventListener('click', handleContinueGame);
+
+        DOM.gameCells.forEach(cell => {
+            cell.addEventListener('click', handleCellClick);
+        });
+
+        DOM.playAgainButtons.forEach(button => {
+            button.addEventListener('click', handlePlayAgain);
+        });
+
+        DOM.backToMenuButtons.forEach(button => {
+            button.addEventListener('click', handleBackToMenu);
+        });
+
+        DOM.soundToggleButton.addEventListener('click', handleSoundToggle);
+        DOM.backButtonPickSide.addEventListener('click', handleBackFromPickSide);
+        DOM.backButtonGameBoard.addEventListener('click', handleBackFromGameBoard);
+    });
+  </script>
+</body>
+</html>
